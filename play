@@ -1,0 +1,55 @@
+require 'rubygems'
+require 'mikka'
+require File.dirname(__FILE__) + '/lib/jl1.0.1.jar'
+
+java_import 'javazoom.jl.player.Player'
+
+class Band < Struct.new(:members); end
+
+class Conductor < Mikka::Actor
+  def receive(msg)
+    case msg
+    when Band
+      msg.members.each { |member| member << "start" }
+    when "end"
+      context.reply "end"
+    end
+  end
+end
+
+class Instrument < Mikka::Actor
+  def play(end_version=false)
+    file = "mp3/" + self.class.name + (end_version ? "End.mp3" : ".mp3")
+    puts "playing #{file}"
+    File.open(file) { |io| Player.new(io.to_inputstream).play }
+    puts "done playing #{file}"
+  end
+  
+  def receive(instruction)
+    case instruction
+    when "start" then play
+    when "end" then play(true)
+    end
+  end
+end
+
+class Guitar < Instrument; end
+class Bass < Instrument; end
+class Drum < Instrument
+  def play(end_version=false)
+    super
+    context.reply("end") unless end_version
+  end
+end
+
+conductor = Mikka.actor_of(Conductor).tap { |c| c.start }
+
+members = [Guitar, Drum, Bass].map do |inst_class|
+  Mikka.actor_of(inst_class).tap { |inst| inst.start }
+end
+
+conductor << Band.new(members)
+
+sleep 15
+
+Mikka.registry.shutdown_all
