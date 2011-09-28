@@ -9,9 +9,9 @@ class Band < Struct.new(:members); end
 class Conductor < Mikka::Actor
   def receive(msg)
     case msg
-    when Band
+    when Band # received a band to conduct
       msg.members.each { |member| member << "start" }
-    when "end"
+    when "end" # instrument wants end sound played
       context.reply "end"
     end
   end
@@ -38,6 +38,7 @@ class Bass < Instrument; end
 class Drum < Instrument
   def play(end_version=false)
     super
+    # Ask the conductor to request the end sound to be played
     context.reply("end") unless end_version
   end
 end
