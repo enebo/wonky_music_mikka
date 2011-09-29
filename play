@@ -51,6 +51,7 @@ end
 
 conductor << Band.new(members)
 
-sleep 15
+sleep 40
+puts "Shutting down"
 
 Mikka.registry.shutdown_all
