@@ -12,7 +12,7 @@ class Conductor < Mikka::Actor
     when Band # received a band to conduct
       msg.members.each { |member| member << "start" }
     when "end" # instrument wants end sound played
-      context.reply "end"
+      get_sender << "end"
     end
   end
 end
@@ -39,19 +39,21 @@ class Drum < Instrument
   def play(end_version=false)
     super
     # Ask the conductor to request the end sound to be played
-    context.reply("end") unless end_version
+    get_sender << "end" unless end_version
   end
 end
 
-conductor = Mikka.actor_of(Conductor).tap { |c| c.start }
+system = Mikka.create_actor_system('system')
+
+conductor = system.actor_of(Mikka::Props[Conductor])
 
 members = [Guitar, Drum, Bass].map do |inst_class|
-  Mikka.actor_of(inst_class).tap { |inst| inst.start }
+  system.actor_of(Mikka::Props[inst_class])
 end
 
 conductor << Band.new(members)
 
-sleep 40
+sleep 45
 puts "Shutting down"
 
-Mikka.registry.shutdown_all
+system.shutdown
