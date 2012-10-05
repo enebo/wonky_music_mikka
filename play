@@ -4,15 +4,12 @@ require File.dirname(__FILE__) + '/lib/jl1.0.1.jar'
 
 java_import 'javazoom.jl.player.Player'
 
-class Band < Struct.new(:members); end
-
 class Conductor < Mikka::Actor
   def receive(msg)
-    case msg
-    when Band # received a band to conduct
-      msg.members.each { |member| member << "start" }
-    when "end" # instrument wants end sound played
-      get_sender << "end"
+    if msg == "finale" # instrument wants end sound played
+      get_sender << "finale"
+    else
+      msg[0] << "play"
     end
   end
 end
@@ -27,8 +24,8 @@ class Instrument < Mikka::Actor
   
   def receive(instruction)
     case instruction
-    when "start" then play
-    when "end" then play(true)
+    when "play" then play
+    when "finale" then play(true)
     end
   end
 end
@@ -39,19 +36,18 @@ class Drum < Instrument
   def play(end_version=false)
     super
     # Ask the conductor to request the end sound to be played
-    get_sender << "end" unless end_version
+    get_sender << "finale" unless end_version
   end
 end
 
-system = Mikka.create_actor_system('system')
+system = Mikka.create_actor_system('systam')
 
 conductor = system.actor_of(Mikka::Props[Conductor])
 
-members = [Guitar, Drum, Bass].map do |inst_class|
-  system.actor_of(Mikka::Props[inst_class])
+[Guitar, Drum, Bass].each do |inst_class|
+  # Why will this not work without wrapping?
+  conductor << [system.actor_of(Mikka::Props[inst_class])]
 end
-
-conductor << Band.new(members)
 
 sleep 45
 puts "Shutting down"
